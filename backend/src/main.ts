@@ -8,7 +8,7 @@ async function bootstrap() {
 
   app.enableCors({
   origin: [
-    'https://project-management-app-1-44j.onrender.com',
+    'https://project-management-app-1-a41j.onrender.com',
     'http://localhost:3000',
   ],
   credentials: true,
