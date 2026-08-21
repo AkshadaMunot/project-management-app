@@ -76,7 +76,7 @@ type ApiTask = Partial<Task> & {
 };
 
 function normalizeTask(item: ApiTask): Task | null {
-  const id = String(item.id ?? item._id ?? "").trim();
+  const id = String(item._id ?? item.id ?? "").trim();
   if (!id) return null;
 
   return {
@@ -358,42 +358,77 @@ export default function TasksPage() {
   }, [showFields, showFilter]);
 
   useEffect(() => {
-    let cancelled = false;
-
     const loadTasks = async () => {
       try {
         const response = await fetch(`${API_URL}/tasks`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
           cache: "no-store",
         });
 
         if (!response.ok) {
-          throw new Error("Failed to load tasks");
+          throw new Error(`Failed to load tasks: ${response.status}`);
         }
 
         const data = await response.json();
-        const list = Array.isArray(data) ? data : data?.tasks ?? [];
-        const normalized = list
-          .map((item: ApiTask) => normalizeTask(item))
-          .filter((item): item is Task => Boolean(item));
 
-        if (!cancelled) {
-          setTasks(normalized);
-        }
+        const apiTasks = Array.isArray(data)
+          ? data
+              .map((item) => normalizeTask(item))
+              .filter((item): item is Task => item !== null)
+          : [];
+
+        setTasks(apiTasks);
       } catch (error) {
         console.error("Failed to load tasks:", error);
-        if (!cancelled) setTasks([]);
+        setTasks([]);
       } finally {
-        if (!cancelled) setHydrated(true);
+        setHydrated(true);
       }
     };
 
     loadTasks();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
+  type ApiTask = Partial<Task> & {
+  _id?: string;
+  id?: string;
+};
+
+function normalizeTask(item: ApiTask): Task | null {
+  const id = String(
+    item.id ??
+    item._id ??
+    ""
+  ).trim();
+
+  if (!id) {
+    return null;
+  }
+
+  return {
+    id,
+    title: String(item.title ?? "Untitled Task"),
+    description: String(item.description ?? ""),
+    priority: String(item.priority ?? "Medium"),
+    member: String(item.member ?? "Admin"),
+    status: String(item.status ?? "To Do"),
+    labels: Array.isArray(item.labels)
+      ? item.labels.filter(
+          (label): label is string =>
+            typeof label === "string"
+        )
+      : [],
+    subtasks: Array.isArray(item.subtasks)
+      ? item.subtasks
+      : [],
+    comments: Array.isArray(item.comments)
+      ? item.comments
+      : [],
+  };
+}
   const addTask = async () => {
     const title = newTitle.trim();
 

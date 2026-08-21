@@ -21,17 +21,19 @@ import {
 
 @Injectable()
 export class TasksService {
+
   constructor(
     @InjectModel(Task.name)
     private readonly taskModel: Model<TaskDocument>,
   ) {}
 
 
-  // ==================================================
+  // =====================================================
   // CREATE SLUG
-  // ==================================================
+  // =====================================================
 
   private createSlug(title: string): string {
+
     const cleanTitle = String(title ?? '')
       .trim()
       .toLowerCase();
@@ -48,13 +50,13 @@ export class TasksService {
   }
 
 
-  // ==================================================
-  // FIND TASK BY CUSTOM ID OR MONGODB ID
-  // ==================================================
+  // =====================================================
+  // FIND TASK BY CUSTOM ID OR MONGODB _id
+  // =====================================================
 
   private async findTaskById(id: string) {
 
-    // First check custom id
+    // First try custom id
     const taskByCustomId =
       await this.taskModel
         .findOne({ id })
@@ -65,7 +67,7 @@ export class TasksService {
     }
 
 
-    // Then check MongoDB _id
+    // Then try MongoDB _id
     if (Types.ObjectId.isValid(id)) {
 
       const taskByMongoId =
@@ -83,9 +85,9 @@ export class TasksService {
   }
 
 
-  // ==================================================
+  // =====================================================
   // GET ALL TASKS
-  // ==================================================
+  // =====================================================
 
   async findAll() {
 
@@ -105,20 +107,33 @@ export class TasksService {
   }
 
 
-  // ==================================================
+  // =====================================================
   // GET SINGLE TASK
-  // ==================================================
+  // =====================================================
 
   async findOne(id: string) {
+
+    console.log('FIND TASK ID:', id);
 
     const task =
       await this.findTaskById(id);
 
     if (!task) {
+
+      console.log(
+        'TASK NOT FOUND:',
+        id,
+      );
+
       throw new NotFoundException(
         'Task not found',
       );
     }
+
+    console.log(
+      'TASK FOUND:',
+      task,
+    );
 
     return {
       ...task,
@@ -130,50 +145,57 @@ export class TasksService {
   }
 
 
-  // ==================================================
+  // =====================================================
   // CREATE TASK
-  // ==================================================
+  // =====================================================
 
-  async create(createTaskDto: CreateTaskDto) {
+  async create(
+    createTaskDto: CreateTaskDto,
+  ) {
 
-    // ----------------------------------------------
-    // IMPORTANT: validate request body
-    // ----------------------------------------------
+    console.log(
+      'CREATE TASK BODY:',
+      createTaskDto,
+    );
 
+
+    // Validate body
     if (!createTaskDto) {
+
       throw new BadRequestException(
         'Request body is missing',
       );
     }
 
 
+    // Validate title
     if (
       !createTaskDto.title ||
       typeof createTaskDto.title !== 'string' ||
       !createTaskDto.title.trim()
     ) {
+
       throw new BadRequestException(
         'Task title is required',
       );
     }
 
 
-    // ----------------------------------------------
+    // =================================================
     // CREATE CUSTOM ID
-    // ----------------------------------------------
+    // =================================================
 
     const baseId =
       this.createSlug(
         createTaskDto.title,
       );
 
-
     let taskId = baseId;
 
 
-    // ----------------------------------------------
-    // PREVENT DUPLICATE ID
-    // ----------------------------------------------
+    // =================================================
+    // CHECK DUPLICATE ID
+    // =================================================
 
     const existingTask =
       await this.taskModel
@@ -182,7 +204,6 @@ export class TasksService {
         })
         .lean();
 
-
     if (existingTask) {
 
       taskId =
@@ -190,9 +211,9 @@ export class TasksService {
     }
 
 
-    // ----------------------------------------------
-    // CREATE DOCUMENT
-    // ----------------------------------------------
+    // =================================================
+    // CREATE TASK DOCUMENT
+    // =================================================
 
     const task =
       new this.taskModel({
@@ -219,58 +240,108 @@ export class TasksService {
           'To Do',
 
         labels:
-          Array.isArray(createTaskDto.labels)
+          Array.isArray(
+            createTaskDto.labels,
+          )
             ? createTaskDto.labels
             : [],
 
         subtasks:
-          Array.isArray(createTaskDto.subtasks)
+          Array.isArray(
+            createTaskDto.subtasks,
+          )
             ? createTaskDto.subtasks
             : [],
 
         comments:
-          Array.isArray(createTaskDto.comments)
+          Array.isArray(
+            createTaskDto.comments,
+          )
             ? createTaskDto.comments
             : [],
       });
 
 
-    // ----------------------------------------------
-    // SAVE
-    // ----------------------------------------------
+    // =================================================
+    // DEBUG BEFORE SAVE
+    // =================================================
 
-    const savedTask =
-      await task.save();
+    console.log(
+      'BEFORE SAVE:',
+      task,
+    );
 
 
-    // ----------------------------------------------
-    // RETURN NORMALIZED TASK
-    // ----------------------------------------------
+    // =================================================
+    // SAVE TO MONGODB
+    // =================================================
 
-    return {
-      ...savedTask.toObject(),
+    try {
 
-      id:
-        savedTask.id ??
-        savedTask._id.toString(),
-    };
+      const savedTask =
+        await task.save();
+
+
+      // =================================================
+      // DEBUG AFTER SAVE
+      // =================================================
+
+      console.log(
+        'AFTER SAVE:',
+        savedTask,
+      );
+
+
+      // =================================================
+      // RETURN TASK
+      // =================================================
+
+      return {
+
+        ...savedTask.toObject(),
+
+        id:
+          savedTask.id ??
+          savedTask._id.toString(),
+      };
+
+    } catch (error) {
+
+      console.error(
+        'TASK SAVE ERROR:',
+        error,
+      );
+
+      throw error;
+    }
   }
 
 
-  // ==================================================
+  // =====================================================
   // UPDATE TASK
-  // ==================================================
+  // =====================================================
 
   async update(
     id: string,
     updateData: Partial<CreateTaskDto>,
   ) {
 
+    console.log(
+      'UPDATE TASK ID:',
+      id,
+    );
+
+    console.log(
+      'UPDATE DATA:',
+      updateData,
+    );
+
+
     const existingTask =
       await this.findTaskById(id);
 
-
     if (!existingTask) {
+
       throw new NotFoundException(
         'Task not found',
       );
@@ -297,6 +368,7 @@ export class TasksService {
 
 
     if (!task) {
+
       throw new NotFoundException(
         'Task not found',
       );
@@ -304,6 +376,7 @@ export class TasksService {
 
 
     return {
+
       ...task,
 
       id:
@@ -313,17 +386,23 @@ export class TasksService {
   }
 
 
-  // ==================================================
+  // =====================================================
   // DELETE TASK
-  // ==================================================
+  // =====================================================
 
   async remove(id: string) {
+
+    console.log(
+      'DELETE TASK ID:',
+      id,
+    );
+
 
     const existingTask =
       await this.findTaskById(id);
 
-
     if (!existingTask) {
+
       throw new NotFoundException(
         'Task not found',
       );
@@ -337,6 +416,7 @@ export class TasksService {
 
 
     return {
+
       message:
         'Task deleted successfully',
     };

@@ -33,36 +33,260 @@ const ACCENT_THEMES: Record<AccentMode, { color: string; soft: string }> = {
   Black: { color: "#111827", soft: "color-mix(in srgb, #111827 18%, transparent)" },
 };
 
-function readAccentMode(): AccentMode {
-  const value = document.documentElement.getAttribute("data-color-mode");
-  const normalized = String(value ?? "").trim().toLowerCase();
-  const mode = ["Amber", "Blue", "Pink", "Rose", "Emerald", "Black"].find(
-    (item) => item.toLowerCase() === normalized
+function normalizeColor(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+}
+
+function rgbToHex(value: string): string | null {
+  const match = value.match(
+    /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+[\d.]+)?\s*\)$/i
   );
-  return (mode as AccentMode | undefined) ?? "Blue";
+
+  if (!match) return null;
+
+  const [r, g, b] = match.slice(1, 4).map(Number);
+
+  if ([r, g, b].some((channel) => channel < 0 || channel > 255)) {
+    return null;
+  }
+
+  return (
+    "#" +
+    [r, g, b]
+      .map((channel) => channel.toString(16).padStart(2, "0"))
+      .join("")
+  );
+}
+
+function getModeFromValue(value: unknown): AccentMode | null {
+  if (value == null) return null;
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw.toLowerCase();
+
+  const modeByName: Record<string, AccentMode> = {
+    amber: "Amber",
+    blue: "Blue",
+    pink: "Pink",
+    rose: "Rose",
+    emerald: "Emerald",
+    black: "Black",
+  };
+
+  if (modeByName[normalized]) {
+    return modeByName[normalized];
+  }
+
+  let color = normalizeColor(raw);
+
+  // Handle rgb()/rgba() values.
+  const rgbHex = rgbToHex(raw);
+  if (rgbHex) {
+    color = rgbHex;
+  }
+
+  // Handle CSS values such as "#f59e0b !important".
+  color = color.replace("!important", "");
+
+  for (const mode of Object.keys(ACCENT_THEMES) as AccentMode[]) {
+    if (normalizeColor(ACCENT_THEMES[mode].color) === color) {
+      return mode;
+    }
+  }
+
+  return null;
+}
+
+function readAccentMode(): AccentMode {
+  const root = document.documentElement;
+  const body = document.body;
+
+  /*
+   * Priority:
+   * 1. Persisted theme name/color
+   * 2. Data attributes/classes
+   * 3. CSS custom properties used by the workspace
+   *
+   * This makes the task-details page use the same accent color
+   * even when the color was selected on another page.
+   */
+
+  const storedValues = [
+    localStorage.getItem("colorMode"),
+    localStorage.getItem("color-mode"),
+    localStorage.getItem("accentColor"),
+    localStorage.getItem("accent-color"),
+    localStorage.getItem("themeColor"),
+    localStorage.getItem("theme-color"),
+  ];
+
+  for (const value of storedValues) {
+    const mode = getModeFromValue(value);
+    if (mode) return mode;
+  }
+
+  const attributeValues = [
+    root.getAttribute("data-color-mode"),
+    root.getAttribute("data-color"),
+    root.getAttribute("data-accent-color"),
+    root.getAttribute("data-accent"),
+    body?.getAttribute("data-color-mode"),
+    body?.getAttribute("data-color"),
+    body?.getAttribute("data-accent-color"),
+    body?.getAttribute("data-accent"),
+  ];
+
+  for (const value of attributeValues) {
+    const mode = getModeFromValue(value);
+    if (mode) return mode;
+  }
+
+  const classValues = [
+    ...root.className.split(/\s+/).filter(Boolean),
+    ...(body?.className.split(/\s+/).filter(Boolean) ?? []),
+  ];
+
+  for (const className of classValues) {
+    const directMode = getModeFromValue(className);
+    if (directMode) return directMode;
+
+    const parts = className.split(/[-_]/);
+    for (const part of parts) {
+      const mode = getModeFromValue(part);
+      if (mode) return mode;
+    }
+  }
+
+  // Read the actual CSS variable used by the workspace.
+  const rootStyles = getComputedStyle(root);
+  const bodyStyles = body ? getComputedStyle(body) : null;
+
+  const cssValues = [
+    rootStyles.getPropertyValue("--accent"),
+    rootStyles.getPropertyValue("--accent-color"),
+    rootStyles.getPropertyValue("--primary"),
+    rootStyles.getPropertyValue("--primary-color"),
+    bodyStyles?.getPropertyValue("--accent"),
+    bodyStyles?.getPropertyValue("--accent-color"),
+    bodyStyles?.getPropertyValue("--primary"),
+    bodyStyles?.getPropertyValue("--primary-color"),
+  ];
+
+  for (const value of cssValues) {
+    const mode = getModeFromValue(value);
+    if (mode) return mode;
+  }
+
+  return "Blue";
 }
 
 function useAccentTheme() {
   const [mode, setMode] = useState<AccentMode>("Blue");
+
   useEffect(() => {
-    const sync = () => setMode(readAccentMode());
-    sync();
-    const observer = new MutationObserver(sync);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-color-mode", "data-color"] });
-    const storage = (event: StorageEvent) => {
-      if (["colorMode", "color-mode", "accentColor", "accent-color"].includes(event.key ?? "")) sync();
+    let lastMode: AccentMode | null = null;
+
+    const sync = () => {
+      const nextMode = readAccentMode();
+
+      if (nextMode !== lastMode) {
+        lastMode = nextMode;
+        setMode(nextMode);
+      }
     };
+
+    // Read the current theme immediately after mounting.
+    sync();
+
+    /*
+     * Observe changes made by the sidebar/theme provider.
+     * We intentionally observe style because many theme implementations
+     * update CSS variables through the style attribute.
+     */
+    const observer = new MutationObserver(sync);
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: [
+        "class",
+        "style",
+        "data-color-mode",
+        "data-color",
+        "data-accent-color",
+        "data-accent",
+      ],
+    });
+
+    if (document.body) {
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: [
+          "class",
+          "style",
+          "data-color-mode",
+          "data-color",
+          "data-accent-color",
+          "data-accent",
+        ],
+      });
+    }
+
+    const storage = (event: StorageEvent) => {
+      const supportedKeys = [
+        "colorMode",
+        "color-mode",
+        "accentColor",
+        "accent-color",
+        "themeColor",
+        "theme-color",
+      ];
+
+      if (supportedKeys.includes(event.key ?? "") || event.key === null) {
+        sync();
+      }
+    };
+
+    const handleCustomThemeEvent = () => {
+      // Give the theme provider a moment to update its CSS variables.
+      window.requestAnimationFrame(sync);
+    };
+
     window.addEventListener("storage", storage);
-    window.addEventListener("color-mode-change", sync);
-    window.addEventListener("accent-color-change", sync);
+    window.addEventListener("color-mode-change", handleCustomThemeEvent);
+    window.addEventListener("accent-color-change", handleCustomThemeEvent);
+    window.addEventListener("theme-change", handleCustomThemeEvent);
+
+    // Catch theme changes that happen without a DOM mutation/event.
+    const interval = window.setInterval(sync, 500);
+
     return () => {
-      observer.disconnect(); window.removeEventListener("storage", storage);
-      window.removeEventListener("color-mode-change", sync); window.removeEventListener("accent-color-change", sync);
+      observer.disconnect();
+
+      window.removeEventListener("storage", storage);
+      window.removeEventListener(
+        "color-mode-change",
+        handleCustomThemeEvent
+      );
+      window.removeEventListener(
+        "accent-color-change",
+        handleCustomThemeEvent
+      );
+      window.removeEventListener(
+        "theme-change",
+        handleCustomThemeEvent
+      );
+
+      window.clearInterval(interval);
     };
   }, []);
+
   return ACCENT_THEMES[mode];
 }
-
 
 type ApiTask = Partial<Task> & {
   _id?: string;
@@ -146,48 +370,50 @@ export default function TaskDetailsPage() {
   ========================= */
 
   useEffect(() => {
-    let cancelled = false;
-
     const loadTask = async () => {
+      if (!taskId) return;
+
       try {
+        setLoading(true);
+
         const response = await fetch(
           `${API_URL}/tasks/${encodeURIComponent(taskId)}`,
-          { cache: "no-store" }
+          {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+            },
+            cache: "no-store",
+          }
         );
 
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error("NOT_FOUND");
           }
-          throw new Error("Failed to load task");
+
+          throw new Error(`Failed to load task: ${response.status}`);
         }
 
-        const normalized = normalizeTask(await response.json());
+        const data = await response.json();
+        const normalized = normalizeTask(data);
 
         if (!normalized) {
-          throw new Error("INVALID_TASK");
+          throw new Error("Invalid task returned by backend");
         }
 
-        if (!cancelled) {
-          setTask(normalized);
-          setOriginalTask(JSON.parse(JSON.stringify(normalized)));
-        }
+        setTask(normalized);
+        setOriginalTask(JSON.parse(JSON.stringify(normalized)));
       } catch (error) {
         console.error("Failed to load task:", error);
-        if (!cancelled) {
-          setTask(null);
-          setOriginalTask(null);
-        }
+        setTask(null);
+        setOriginalTask(null);
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
     };
 
-    if (taskId) loadTask();
-
-    return () => {
-      cancelled = true;
-    };
+    loadTask();
   }, [taskId]);
 
   /* =========================
@@ -211,7 +437,10 @@ export default function TaskDetailsPage() {
         `${API_URL}/tasks/${encodeURIComponent(task.id)}`,
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
           body: JSON.stringify({
             title: task.title,
             description: task.description,
@@ -225,23 +454,46 @@ export default function TaskDetailsPage() {
         }
       );
 
+      const responseText = await response.text();
+      let responseData: any = null;
+
+      if (responseText) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch {
+          responseData = null;
+        }
+      }
+
       if (!response.ok) {
-        throw new Error("Failed to save task");
+        const message =
+          responseData && responseData.message
+            ? Array.isArray(responseData.message)
+              ? responseData.message.join(", ")
+              : String(responseData.message)
+            : `Failed to save task: ${response.status}`;
+
+        throw new Error(message);
       }
 
-      const saved = normalizeTask(await response.json());
+      const updatedTask = normalizeTask(
+        (responseData ?? {}) as ApiTask
+      );
 
-      if (!saved) {
-        throw new Error("Backend returned an invalid task");
+      if (!updatedTask) {
+        throw new Error("Backend returned an invalid updated task.");
       }
 
-      setTask(saved);
-      setOriginalTask(JSON.parse(JSON.stringify(saved)));
+      setTask(updatedTask);
+      setOriginalTask(JSON.parse(JSON.stringify(updatedTask)));
       setEditing(false);
-      router.push("/tasks");
     } catch (error) {
       console.error("Failed to save task:", error);
-      window.alert("Could not save changes. Please check that the backend is running.");
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Could not save the task."
+      );
     }
   };
 
@@ -395,17 +647,40 @@ export default function TaskDetailsPage() {
     try {
       const response = await fetch(
         `${API_URL}/tasks/${encodeURIComponent(task.id)}`,
-        { method: "DELETE" }
+        {
+          method: "DELETE",
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to delete task");
+        const text = await response.text();
+        let message = `Failed to delete task: ${response.status}`;
+
+        try {
+          const data = JSON.parse(text);
+          if (data?.message) {
+            message = Array.isArray(data.message)
+              ? data.message.join(", ")
+              : String(data.message);
+          }
+        } catch {
+          // keep default message
+        }
+
+        throw new Error(message);
       }
 
       router.push("/tasks");
     } catch (error) {
       console.error("Failed to delete task:", error);
-      window.alert("Could not delete the task. Please check that the backend is running.");
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Could not delete the task."
+      );
     }
   };
 
