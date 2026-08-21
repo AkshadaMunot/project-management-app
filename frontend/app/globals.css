@@ -1,0 +1,409 @@
+@import "tailwindcss";
+
+/* =========================================================
+   TAILWIND DARK MODE
+   ========================================================= */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+
+/* =========================================================
+   ROOT VARIABLES
+   ========================================================= */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #f8fafc;
+  --border: #e2e8f0;
+
+  /* Default color = Blue */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-text: #1d4ed8;
+}
+
+
+/* =========================================================
+   HTML
+   ========================================================= */
+
+html {
+  background: var(--background);
+}
+
+
+/* =========================================================
+   DARK THEME
+   ========================================================= */
+
+html.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  --surface: #0f172a;
+  --surface-muted: #1e293b;
+  --border: #334155;
+
+  color-scheme: dark;
+}
+
+
+/* =========================================================
+   BODY
+   ========================================================= */
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+
+/* =========================================================
+   DARK MODE - BACKGROUNDS
+   ========================================================= */
+
+html.dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #1e293b !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #334155 !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #475569 !important;
+}
+
+html.dark .bg-slate-900 {
+  background-color: #020617 !important;
+}
+
+
+/* =========================================================
+   DARK MODE - TEXT
+   ========================================================= */
+
+html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+
+/* =========================================================
+   DARK MODE - BORDERS
+   ========================================================= */
+
+html.dark .border-slate-100 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+html.dark .border-slate-300 {
+  border-color: #475569 !important;
+}
+
+
+/* =========================================================
+   DARK MODE - FORM ELEMENTS
+   ========================================================= */
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  color-scheme: dark;
+}
+
+html.dark select {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html.dark select option {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+
+/* =========================================================
+   DARK MODE - HOVER
+   ========================================================= */
+
+html.dark .hover\:bg-slate-50:hover {
+  background-color: #1e293b !important;
+}
+
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+html.dark .hover\:bg-slate-200:hover {
+  background-color: #475569 !important;
+}
+
+
+/* =========================================================
+   COLOR MODE VARIABLES
+   ========================================================= */
+
+/* -------------------------
+   AMBER
+   ------------------------- */
+
+html[data-color-mode="amber"] {
+  --accent: #d97706;
+  --accent-hover: #b45309;
+  --accent-soft: #fffbeb;
+  --accent-text: #b45309;
+}
+
+
+/* -------------------------
+   BLUE
+   ------------------------- */
+
+html[data-color-mode="blue"] {
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #eff6ff;
+  --accent-text: #1d4ed8;
+}
+
+
+/* -------------------------
+   PINK
+   ------------------------- */
+
+html[data-color-mode="pink"] {
+  --accent: #db2777;
+  --accent-hover: #be185d;
+  --accent-soft: #fdf2f8;
+  --accent-text: #be185d;
+}
+
+
+/* -------------------------
+   ROSE
+   ------------------------- */
+
+html[data-color-mode="rose"] {
+  --accent: #e11d48;
+  --accent-hover: #be123c;
+  --accent-soft: #fff1f2;
+  --accent-text: #be123c;
+}
+
+
+/* -------------------------
+   EMERALD
+   ------------------------- */
+
+html[data-color-mode="emerald"] {
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-soft: #ecfdf5;
+  --accent-text: #047857;
+}
+
+
+/* -------------------------
+   BLACK
+   ------------------------- */
+
+html[data-color-mode="black"] {
+  --accent: #111827;
+  --accent-hover: #000000;
+  --accent-soft: #f3f4f6;
+  --accent-text: #111827;
+}
+
+
+/* =========================================================
+   ACCENT - BACKGROUND COLORS
+   ========================================================= */
+
+/* Main blue buttons */
+
+html[data-color-mode] .bg-blue-500 {
+  background-color: var(--accent) !important;
+}
+
+html[data-color-mode] .bg-blue-600 {
+  background-color: var(--accent) !important;
+}
+
+
+/* Light accent backgrounds */
+
+html[data-color-mode] .bg-blue-50 {
+  background-color: var(--accent-soft) !important;
+}
+
+html[data-color-mode] .bg-blue-100 {
+  background-color: var(--accent-soft) !important;
+}
+
+
+/* =========================================================
+   ACCENT - TEXT COLORS
+   ========================================================= */
+
+html[data-color-mode] .text-blue-400 {
+  color: var(--accent) !important;
+}
+
+html[data-color-mode] .text-blue-500 {
+  color: var(--accent) !important;
+}
+
+html[data-color-mode] .text-blue-600 {
+  color: var(--accent) !important;
+}
+
+html[data-color-mode] .text-blue-700 {
+  color: var(--accent-text) !important;
+}
+
+
+/* =========================================================
+   ACCENT - BORDERS
+   ========================================================= */
+
+html[data-color-mode] .border-blue-200 {
+  border-color: color-mix(
+    in srgb,
+    var(--accent) 25%,
+    white
+  ) !important;
+}
+
+html[data-color-mode] .border-blue-300 {
+  border-color: color-mix(
+    in srgb,
+    var(--accent) 40%,
+    white
+  ) !important;
+}
+
+html[data-color-mode] .border-blue-400 {
+  border-color: var(--accent) !important;
+}
+
+
+/* =========================================================
+   ACCENT - HOVER BACKGROUNDS
+   ========================================================= */
+
+html[data-color-mode] .hover\:bg-blue-600:hover {
+  background-color: var(--accent-hover) !important;
+}
+
+html[data-color-mode] .hover\:bg-blue-700:hover {
+  background-color: var(--accent-hover) !important;
+}
+
+
+/* =========================================================
+   ACCENT - HOVER TEXT
+   ========================================================= */
+
+html[data-color-mode] .hover\:text-blue-600:hover {
+  color: var(--accent) !important;
+}
+
+html[data-color-mode] .hover\:text-blue-700:hover {
+  color: var(--accent-text) !important;
+}
+
+
+/* =========================================================
+   ACCENT - FOCUS
+   ========================================================= */
+
+html[data-color-mode] .focus\:border-blue-400:focus {
+  border-color: var(--accent) !important;
+}
+
+html[data-color-mode] .focus\:border-blue-500:focus {
+  border-color: var(--accent) !important;
+}
+
+html[data-color-mode] .focus\:ring-blue-100:focus {
+  --tw-ring-color: var(--accent-soft) !important;
+}
+
+html[data-color-mode] .focus\:ring-blue-200:focus {
+  --tw-ring-color: color-mix(
+    in srgb,
+    var(--accent) 20%,
+    transparent
+  ) !important;
+}
+
+
+/* =========================================================
+   ACCENT - GROUP HOVER
+   ========================================================= */
+
+html[data-color-mode] .group:hover .group-hover\:text-blue-600 {
+  color: var(--accent) !important;
+}
+
+html[data-color-mode] .group:hover .group-hover\:text-blue-700 {
+  color: var(--accent-text) !important;
+}
+
+
+/* =========================================================
+   ACCENT - RING
+   ========================================================= */
+
+html[data-color-mode] .ring-blue-400 {
+  --tw-ring-color: var(--accent) !important;
+}
+
+html[data-color-mode] .ring-blue-500 {
+  --tw-ring-color: var(--accent) !important;
+}
+
+
+/* =========================================================
+   SELECTION
+   ========================================================= */
+
+::selection {
+  background: var(--accent);
+  color: white;
+}
