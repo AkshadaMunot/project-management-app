@@ -60,7 +60,7 @@ const uniqueProjects = (items: ApiProject[]): Project[] => {
   return Array.from(map.values());
 };
 
-const API_URL = "http://localhost:3001";
+const API_URL = "https://project-management-app-ctvj.onrender.com";
 
 type AccentMode = "Amber" | "Blue" | "Pink" | "Rose" | "Emerald" | "Black";
 
