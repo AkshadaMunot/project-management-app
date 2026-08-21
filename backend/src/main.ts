@@ -7,9 +7,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: 'http://localhost:3000',
-    credentials: true,
-  });
+  origin: [
+    'https://project-management-app-1-44j.onrender.com',
+    'http://localhost:3000',
+  ],
+  credentials: true,
+});
 
   app.useGlobalPipes(
     new ValidationPipe({
