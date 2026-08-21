@@ -1,7 +1,7 @@
 
-# Project Management App
+# Task Management System
 
-A full-stack project management application for managing projects and tasks from a single workspace.
+A full-stack task management application for managing projects and tasks from a single workspace.
 
 ## Features
 
